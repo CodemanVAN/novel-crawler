@@ -76,7 +76,7 @@ def get_Novel_Text(chapter_URL):
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/93.0.4577.63 Safari/537.36 Edg/93.0.961.47'}
     novel_URL = chapter_URL
     textHtml = requests.get(novel_URL, headers)
-    textHtmlSoup = detailHtmlSoup = BeautifulSoup(
+    textHtmlSoup = BeautifulSoup(
         textHtml.content.decode('GBK'), 'lxml')
     text = textHtmlSoup.find(
         'div', class_='read-content').text.replace('<br/>', '')
