@@ -60,21 +60,25 @@ def download_Novel(novel_URL):
             for chapter in content:
                 chapterDict = {}
                 chapterDict['标题'] = chapter.text
-                
                 if chapter.text == '':
                     continue
                 my_Print('下载 '+chapter.text)
                 chapterDict['链接'] = baseUrl+chapter.get('href')
-                chapterDict['正文'] = get_Novel_Text(chapterDict['链接'])
+                try:
+                    chapterDict['正文'] = get_Novel_Text(chapterDict['链接'])
+                except:
+                     chapterDict['正文']='下载失败'
+                     my_Print(chapter.text+'下载失败,60秒后重试')
+                     time.sleep(60)
                 contentList.append(chapterDict)
-                time.sleep(0.5)
+                time.sleep(3)
         return contentList
     else:
         print('Novel download failed')
         return []
 
 def save_Novel(name,contentList):
-    with open(name+'.txt','w',encoding='utf-8') as f:
+    with open(name+'.txt','w',encoding='utf-8',errors='ignore') as f:
         for chapter in contentList:
             f.write(chapter['标题']+'\n'+chapter['链接']+chapter['正文'])   
 def get_Novel_Text(chapter_URL):
@@ -83,7 +87,7 @@ def get_Novel_Text(chapter_URL):
     novel_URL = chapter_URL
     textHtml = requests.get(novel_URL, headers)
     textHtmlSoup = BeautifulSoup(
-        textHtml.content.decode('GBK'), 'lxml')
+        textHtml.content.decode('gb18030',errors='ignore'), 'lxml')
     text = textHtmlSoup.find(
         'div', class_='read-content').text.replace('<br/>', '')
     return text
