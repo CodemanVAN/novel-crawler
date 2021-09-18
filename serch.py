@@ -2,7 +2,7 @@ import urllib.parse as turnUrlCode
 
 import requests
 from bs4 import BeautifulSoup
-
+import datetime,time
 
 def get_Search_Result(keyword):
     headers = {
@@ -27,6 +27,7 @@ def get_Search_Result(keyword):
 
 def decode_Search_Result(htmlSoup):
     baseUrl = 'https://www.635book.com'
+    bookNames=htmlSoup.find_all('span', class_='bq')
     authors = htmlSoup.find_all('span', class_='zz')
     characterNums = htmlSoup.find_all('span', class_='zs')
     brief = htmlSoup.find_all('span', class_='jj')
@@ -35,7 +36,7 @@ def decode_Search_Result(htmlSoup):
     novels = []
     for i in range(totalNum):
         novel = {}
-        novel['名字'] = ''
+        novel['名字'] = bookNames[i].a.text.replace(' ', '').replace('\r\n','')
         novel['作者'] = authors[i].text[3:]
         novel['字数'] = characterNums[i].text[3:]
         novel['简介'] = brief[i].text
@@ -47,7 +48,6 @@ def decode_Search_Result(htmlSoup):
 def download_Novel(novel_URL):
     headers = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/93.0.4577.63 Safari/537.36 Edg/93.0.961.47'}
-    novel_URL = 'https://www.635book.com/1/1251.html'
     detailHtml = requests.get(novel_URL, headers)
     baseUrl = 'https://www.635book.com'
     if detailHtml.status_code == 200:
@@ -60,17 +60,23 @@ def download_Novel(novel_URL):
             for chapter in content:
                 chapterDict = {}
                 chapterDict['标题'] = chapter.text
+                
                 if chapter.text == '':
                     continue
+                my_Print('下载 '+chapter.text)
                 chapterDict['链接'] = baseUrl+chapter.get('href')
                 chapterDict['正文'] = get_Novel_Text(chapterDict['链接'])
                 contentList.append(chapterDict)
+                time.sleep(0.5)
         return contentList
     else:
         print('Novel download failed')
         return []
 
-
+def save_Novel(name,contentList):
+    with open(name+'.txt','w',encoding='utf-8') as f:
+        for chapter in contentList:
+            f.write(chapter['标题']+'\n'+chapter['链接']+chapter['正文'])   
 def get_Novel_Text(chapter_URL):
     headers = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/93.0.4577.63 Safari/537.36 Edg/93.0.961.47'}
@@ -82,6 +88,47 @@ def get_Novel_Text(chapter_URL):
         'div', class_='read-content').text.replace('<br/>', '')
     return text
 
-
-searchResult = get_Search_Result('凡人修仙传')
-decodeResult = decode_Search_Result(searchResult)
+def output_Results(decodeResult):
+    idx=0
+    for i in decodeResult:
+        print('------------------------------',idx,'------------------------------')
+        for j in i.keys():print(j+':',i[j])
+        print('序号：',idx)
+        idx+=1
+        print('------------------------------------------------------------')
+def my_Print(msg):
+    print(datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'),'[*]:',msg)
+if __name__ == '__main__':
+    print('------------------------------------------------------------')
+    my_Print('欢迎使用《夏季吧爬》小说下载软件')
+    my_Print('使用教程：')
+    my_Print('1.输入你要搜索的小说名字。')
+    my_Print('2.对搜索结果进行检索并确定你要下载的小说的序号')
+    my_Print('3.耐心等待下载完成')
+    print('------------------------------------------------------------')
+    targetName=''
+    while targetName=='':
+        targetName=input('输入你要搜索的小说名字并回车\n')
+        if targetName=='':my_Print('错误，请不要直接回车')
+    my_Print('全网搜索'+targetName+'中...')
+    searchResult = get_Search_Result(targetName)
+    my_Print('搜索完毕！共'+str(len(searchResult))+'个结果')
+    my_Print('解码中....')
+    decodeResult = decode_Search_Result(searchResult)
+    novel_Num=len(decodeResult)
+    my_Print('解码成功！输出如下：')
+    output_Results(decodeResult)
+    targetNum=''
+    while targetNum=='':
+        try:
+            targetNum=int(input('输入你要下载的小说序号并回车(0-'+str(novel_Num-1)+'）\n'))
+            if targetNum>=novel_Num:
+                targetNum=''
+                my_Print('输入超过最大范围！请重试')
+        except: my_Print('错误，输入正确的数字')
+    my_Print('正在下载 '+decodeResult[targetNum]['名字'])
+    downloadResult=download_Novel(decodeResult[targetNum]['链接'])
+    save_Novel(decodeResult[targetNum]['名字'],downloadResult)
+    my_Print(decodeResult[targetNum]['名字']+' 下载完成!')
+    my_Print('按任意键退出')
+    input('')
